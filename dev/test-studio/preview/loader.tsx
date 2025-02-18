@@ -6,14 +6,10 @@ const client = createClient({
   projectId: 'ppsg7ml5',
   dataset: 'playground',
   useCdn: true,
-  apiVersion: 'X',
+  apiVersion: '2025-03-10',
   stega: {
     enabled: true,
     studioUrl: '/presentation',
-    // logger: console,
-    filter: (props) => {
-      return props.filterDefault(props)
-    },
   },
 })
 

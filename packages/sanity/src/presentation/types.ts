@@ -82,6 +82,29 @@ export interface HeaderOptions {
 }
 
 /** @public */
+export type PreviewUrlAllowPattern = string | URL | URLPattern
+
+/** @public */
+export interface PreviewUrlAllowOptionContext {
+  client: SanityClient
+  /**
+   * Equivalent to `location.origin`
+   */
+  origin: string
+}
+
+/** @public */
+export type PreviewUrlAllowOption =
+  | PreviewUrlAllowPattern
+  | PreviewUrlAllowPattern[]
+  | ((
+      context: PreviewUrlAllowOptionContext,
+    ) =>
+      | PreviewUrlAllowPattern
+      | PreviewUrlAllowPattern[]
+      | Promise<PreviewUrlAllowPattern | PreviewUrlAllowPattern[]>)
+
+/** @public */
 export type PreviewUrlOption = string | PreviewUrlResolver<SanityClient> | PreviewUrlResolverOptions
 
 /**
@@ -168,7 +191,7 @@ export interface PresentationPluginOptions {
     mainDocuments?: DocumentResolver[]
     locations?: DocumentLocationResolvers | DocumentLocationResolver
   }
-  previewUrl?: PreviewUrlOption
+  previewUrl: PreviewUrlOption
   components?: {
     unstable_header?: HeaderOptions
     unstable_navigator?: NavigatorOptions

@@ -3,7 +3,6 @@ import {type MutableRefObject, useCallback, useEffect, useMemo, useRef, useState
 import {getPublishedId} from 'sanity'
 import {type RouterContextValue, type RouterState, type SearchParam} from 'sanity/router'
 
-import {parseRouterState} from './lib/parse'
 import {
   type CombinedSearchParams,
   type FrameState,
@@ -13,6 +12,7 @@ import {
   type PresentationStateParams,
   type StructureDocumentPaneParams,
 } from './types'
+import {parseRouterState} from './util/parse'
 
 function pruneObject<T extends RouterState | PresentationParamsContextValue>(obj: T): T {
   return Object.fromEntries(

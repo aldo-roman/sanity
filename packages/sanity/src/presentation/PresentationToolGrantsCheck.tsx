@@ -5,13 +5,23 @@ import {
 } from '@sanity/preview-url-secret/constants'
 import {useToast} from '@sanity/ui'
 import {uuid} from '@sanity/uuid'
-import {useEffect, useState} from 'react'
-import {type PermissionCheckResult, type Tool, useGrantsStore, useTranslation} from 'sanity'
+import {useActorRef, useSelector} from '@xstate/react'
+import {useCallback, useEffect, useState, useSyncExternalStore} from 'react'
+import {
+  type PermissionCheckResult,
+  type Tool,
+  useClient,
+  useGrantsStore,
+  useTranslation,
+} from 'sanity'
+import {useRouter} from 'sanity/router'
 
+import {API_VERSION} from './constants'
 import {presentationLocaleNamespace} from './i18n'
+import {previewUrlMachine} from './machines/preview-url'
 import {PresentationSpinner} from './PresentationSpinner'
 import PresentationTool from './PresentationTool'
-import {type PresentationPluginOptions} from './types'
+import {type PresentationPluginOptions, type PreviewUrlOption} from './types'
 import {useVercelBypassSecret} from './useVercelBypassSecret'
 
 export default function PresentationToolGrantsCheck(props: {
@@ -72,6 +82,16 @@ export default function PresentationToolGrantsCheck(props: {
   }, [canCreateUrlPreviewSecrets, pushToast, t, willGeneratePreviewUrlSecret])
 
   const [vercelProtectionBypass, vercelProtectionBypassReadyState] = useVercelBypassSecret()
+  const initialPreviewUrl = useInitialPreviewUrl(props.tool.options?.previewUrl)
+
+  // Don't render <PresentationTool /> until we know it's safe to read `location` during render (it's not, if SSR hydration is happening)
+  const ready = useSyncExternalStore(
+    // eslint-disable-next-line no-empty-function
+    useCallback(() => () => {}, []),
+    () => true,
+    () => false,
+  )
+  if (!ready || !initialPreviewUrl) return <PresentationSpinner />
 
   if (
     vercelProtectionBypassReadyState === 'loading' ||
@@ -91,6 +111,7 @@ export default function PresentationToolGrantsCheck(props: {
   return (
     <PresentationTool
       {...props}
+      initialPreviewUrl={initialPreviewUrl}
       vercelProtectionBypass={vercelProtectionBypass}
       canCreateUrlPreviewSecrets={canCreateUrlPreviewSecrets === true}
       canToggleSharePreviewAccess={
@@ -100,4 +121,47 @@ export default function PresentationToolGrantsCheck(props: {
       canUseSharedPreviewAccess={previewAccessSharingReadPermission?.granted === true}
     />
   )
+}
+
+function useInitialPreviewUrl(previewUrlOption: PreviewUrlOption | undefined) {
+  const client = useClient({apiVersion: API_VERSION})
+  const [url, setUrl] = useState<URL | null>(null)
+  const router = useRouter()
+  const routerSearchParams = new URLSearchParams(router.state._searchParams)
+  const previewSearchParam = routerSearchParams.get('preview')
+  const actorRef = useActorRef(previewUrlMachine.provide({}), {
+    input: {client, previewUrlOption, previewSearchParam},
+  })
+
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setUrl(new URL(location.href))
+    }, 3_000)
+    return () => clearTimeout(timeout)
+  }, [])
+
+  /**
+   * Sync configuration changes, as well as deps changes
+   */
+  useEffect(() => {
+    actorRef.send({type: 'update configuration', previewUrlOption, client})
+  }, [actorRef, client, previewUrlOption])
+
+  /**
+   * Sync changes to router state for the preview search param
+   */
+  useEffect(() => {
+    actorRef.send({type: 'set preview search param', previewSearchParam})
+  }, [actorRef, previewSearchParam])
+
+  const error = useSelector(actorRef, (state) =>
+    state.hasTag('error') ? state.context.error : null,
+  )
+  // Propagate the error to the nearest error boundary
+  if (error) throw error
+
+  // eslint-disable-next-line no-console
+  console.log(useSelector(actorRef, (state) => state))
+
+  return useSelector(actorRef, (state) => state.context.url)
 }

@@ -15,6 +15,7 @@ import {defineConfig, definePlugin, type WorkspaceOptions} from 'sanity'
 import {presentationTool} from 'sanity/presentation'
 import {structureTool} from 'sanity/structure'
 import {imageHotspotArrayPlugin} from 'sanity-plugin-hotspot-array'
+import {internationalizedArray} from 'sanity-plugin-internationalized-array'
 import {markdownSchema} from 'sanity-plugin-markdown'
 import {media} from 'sanity-plugin-media'
 import {muxInput} from 'sanity-plugin-mux-input'
@@ -50,12 +51,30 @@ import {routerDebugTool} from './plugins/router-debug'
 import {theme as tailwindTheme} from './sanity.theme.mjs'
 import {schemaTypes} from './schema'
 import {StegaDebugger} from './schema/debug/components/DebugStega'
+import {types as presentationNextSanitySchemaTypes} from './schema/presentation/next-sanity'
+import {types as presentationPreviewKitSchemaTypes} from './schema/presentation/preview-kit'
 import {defaultDocumentNode, newDocumentOptions, structure} from './structure'
 import {googleTheme} from './themes/google'
 import {vercelTheme} from './themes/vercel'
 import {workshopTool} from './workshop'
 
 const localePlugins = [koKRLocale(), nbNOLocale(), nnNOLocale(), ptPTLocale(), svSELocale()]
+
+const supportedLanguages = [
+  {id: 'ar', title: 'Arabic'},
+  {id: 'en', title: 'English'},
+  {id: 'nb', title: 'Norwegian (bokmål)'},
+  {id: 'nn', title: 'Norwegian (nynorsk)'},
+  {id: 'fi', title: 'Finnish'},
+  {id: 'pt', title: 'Portuguese'},
+  {id: 'es', title: 'Spanish'},
+  {id: 'th', title: 'Thai'},
+  {id: 'zh', title: 'Chinese'},
+  {id: 'fr', title: 'French'},
+  {id: 'de', title: 'German'},
+  {id: 'it', title: 'Italian'},
+  {id: 'ja', title: 'Japanese'},
+]
 
 const sharedSettings = definePlugin({
   name: 'sharedSettings',
@@ -110,15 +129,13 @@ const sharedSettings = definePlugin({
     }),
     languageFilter({
       defaultLanguages: ['nb'],
-      supportedLanguages: [
-        {id: 'ar', title: 'Arabic'},
-        {id: 'en', title: 'English'},
-        {id: 'nb', title: 'Norwegian (bokmål)'},
-        {id: 'nn', title: 'Norwegian (nynorsk)'},
-        {id: 'pt', title: 'Portuguese'},
-        {id: 'es', title: 'Spanish'},
-      ],
+      supportedLanguages,
       types: ['languageFilterDebug'],
+    }),
+    internationalizedArray({
+      languages: supportedLanguages,
+      defaultLanguages: ['en'],
+      fieldTypes: ['string'],
     }),
     googleMapsInput({
       apiKey: 'AIzaSyDDO2FFi5wXaQdk88S1pQUa70bRtWuMhkI',
@@ -362,13 +379,72 @@ export default defineConfig([
       presentationTool({
         name: 'presentation',
         title: 'Presentation',
-        previewUrl: {
-          preview: '/preview/index.html',
-        },
+        // previewUrl: {
+        // preview: '/preview/index.html',
+        // },
+        previewUrl: '/preview/index.html',
       }),
       assist(),
       sharedSettings(),
     ],
     basePath: '/presentation',
+  },
+  {
+    // Based on https://github.com/sanity-io/preview-kit/blob/195a476e5791421c5c8aa16275bad79a67b6ac58/apps/studio/sanity.config.ts#L42-L120
+    name: 'presentation-preview-kit',
+    title: 'Presentation with Preview Kit',
+    basePath: '/presentation-preview-kit',
+    announcements: {enabled: false},
+    scheduledPublishing: {enabled: false},
+    tasks: {enabled: false},
+    releases: {enabled: true},
+    projectId: 'pv8y60vp',
+    dataset: 'production',
+    schema: {types: presentationPreviewKitSchemaTypes},
+    plugins: [
+      structureTool(),
+      presentationTool({
+        name: 'remix',
+        previewUrl: {
+          origin: 'https://preview-kit-remix.sanity.dev',
+          previewMode: {enable: '/api/draft'},
+        },
+      }),
+      presentationTool({
+        name: 'pages-router',
+        previewUrl: {
+          origin: 'https://preview-kit-next-pages-router.sanity.dev',
+          previewMode: {enable: '/api/draft'},
+        },
+      }),
+      presentationTool({
+        name: 'app-router',
+        previewUrl: {
+          origin: 'https://preview-kit-next-app-router.sanity.dev',
+          previewMode: {enable: '/api/draft'},
+        },
+      }),
+      visionTool(),
+    ],
+  },
+  {
+    // Based on https://github.com/sanity-io/next-sanity/blob/1d451c5aa606eb471e8dc4ddcd7ebf6253ae8eec/apps/mvp/sanity.config.ts#L5-L29
+    name: 'presentation-next-sanity',
+    title: 'Presentation with Next Sanity',
+    basePath: '/presentation-next-sanity',
+    projectId: 'pv8y60vp',
+    dataset: 'production',
+    schema: {types: presentationNextSanitySchemaTypes},
+    plugins: [
+      assist(),
+      structureTool(),
+      presentationTool({
+        previewUrl: {
+          origin: 'https://next.sanity.dev',
+          previewMode: {enable: '/api/draft-mode/enable'},
+        },
+      }),
+      visionTool(),
+    ],
   },
 ]) as WorkspaceOptions[]

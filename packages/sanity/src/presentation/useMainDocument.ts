@@ -135,6 +135,7 @@ export function useMainDocument(props: {
   })
 
   useEffect(() => {
+    // @TODO resolve base from previewUrl in a more robust way
     const base =
       // eslint-disable-next-line no-nested-ternary
       typeof previewUrl === 'string'

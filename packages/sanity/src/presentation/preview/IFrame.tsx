@@ -36,6 +36,7 @@ export const IFrame = forwardRef<HTMLIFrameElement, IFrameProps>(function IFrame
       <IFrameElement
         style={{
           ...style,
+          // @TODO link to useId() PR that is related to <ViewTransition />
           // useId() guarantees that the ID will be unique, even if we add support for multiple iframe instances,
           // while `view-transition-class: presentation-tool-iframe` provides userland a way to customize the transition with CSS if they wish
           viewTransitionName: `presentation-tool-iframe-${id.replace(/[^a-zA-Z0-9-_]/g, '_')}`,

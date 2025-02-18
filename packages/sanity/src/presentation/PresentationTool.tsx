@@ -36,7 +36,6 @@ import {useEffectEvent} from 'use-effect-event'
 
 import {DEFAULT_TOOL_NAME, EDIT_INTENT_MODE} from './constants'
 import PostMessageFeatures from './features/PostMessageFeatures'
-import {debounce} from './lib/debounce'
 import {SharedStateProvider} from './overlays/SharedStateProvider'
 import {Panel} from './panels/Panel'
 import {Panels} from './panels/Panels'
@@ -69,6 +68,7 @@ import {useParams} from './useParams'
 import {usePopups} from './usePopups'
 import {usePreviewUrl} from './usePreviewUrl'
 import {useStatus} from './useStatus'
+import {debounce} from './util/debounce'
 
 const LiveQueries = lazy(() => import('./loader/LiveQueries'))
 const PostMessageDocuments = lazy(() => import('./overlays/PostMessageDocuments'))
@@ -88,6 +88,7 @@ export default function PresentationTool(props: {
   canToggleSharePreviewAccess: boolean
   canUseSharedPreviewAccess: boolean
   vercelProtectionBypass: string | null
+  initialPreviewUrl: URL
 }): React.JSX.Element {
   const {
     canCreateUrlPreviewSecrets,
@@ -96,7 +97,10 @@ export default function PresentationTool(props: {
     tool,
     vercelProtectionBypass,
   } = props
+  // eslint-disable-next-line no-console
+  console.log('new initialPreviewUrl prop', props.initialPreviewUrl)
   const components = tool.options?.components
+  // @TODO migrate previewUrl logic
   const _previewUrl = tool.options?.previewUrl
   const name = tool.name || DEFAULT_TOOL_NAME
   const {unstable_navigator, unstable_header} = components || {}
@@ -110,6 +114,7 @@ export default function PresentationTool(props: {
     selectedReleaseId ? perspectiveStack : selectedPerspectiveName
   ) as PresentationPerspective
 
+  // Move to state machine!
   const initialPreviewUrl = usePreviewUrl(
     _previewUrl || '/',
     name,
@@ -148,6 +153,7 @@ export default function PresentationTool(props: {
     return typeof window !== 'undefined' && window.location.hostname === 'localhost'
   })
 
+  // @TODO resolve targetOrigin from actor
   const targetOrigin = useMemo(() => {
     return initialPreviewUrl.origin
   }, [initialPreviewUrl.origin])
@@ -195,6 +201,7 @@ export default function PresentationTool(props: {
     navigate: _navigate,
     navigationHistory,
     path: params.preview,
+    // @TODO migrate previewUrl logic
     previewUrl: tool.options?.previewUrl,
     resolvers: tool.options?.resolve?.mainDocuments,
   })
@@ -511,6 +518,7 @@ export default function PresentationTool(props: {
                     <Flex direction="column" flex={1} height="fill" ref={setBoundaryElement}>
                       <BoundaryElementProvider element={boundaryElement}>
                         <Preview
+                          // @TODO move closer to the <iframe> element itself
                           // Make sure the iframe is unmounted if the targetOrigin has changed
                           key={targetOrigin}
                           canSharePreviewAccess={canSharePreviewAccess}

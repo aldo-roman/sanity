@@ -5,7 +5,17 @@ import {
   urlSearchParamVercelSetBypassCookie,
   type VercelSetBypassCookieValue,
 } from '@sanity/preview-url-secret/constants'
-import {Card, Code, Flex, Label, Spinner, Stack, Text, usePrefersReducedMotion} from '@sanity/ui'
+import {
+  Card,
+  Code,
+  Flex,
+  Label,
+  Spinner,
+  Stack,
+  Text,
+  usePrefersReducedMotion,
+  useToast,
+} from '@sanity/ui'
 import {AnimatePresence, motion, MotionConfig} from 'framer-motion'
 import {
   forwardRef,
@@ -19,7 +29,9 @@ import {
   useSyncExternalStore,
 } from 'react'
 import {flushSync} from 'react-dom'
-import {useTranslation} from 'sanity'
+import {Translate, useTranslation} from 'sanity'
+import {createGlobalStyle} from 'styled-components'
+import {useEffectEvent} from 'use-effect-event'
 
 import {Button, TooltipDelayGroupProvider} from '../../ui-components'
 import {ErrorCard} from '../components/ErrorCard'
@@ -43,6 +55,17 @@ import {IFrame} from './IFrame'
 import {PreviewHeader} from './PreviewHeader'
 
 const MotionFlex = motion.create(Flex)
+
+const GlobalViewTransition = createGlobalStyle`
+html:active-view-transition-type(sanity-iframe-viewport) {
+  &::view-transition-old(root) {
+    display: none;
+  }
+  &::view-transition-new(root) {
+    animation: none;
+  }
+}
+`
 
 /** @public */
 export interface PreviewProps extends Pick<PresentationState, 'iframe' | 'visualEditing'> {
@@ -265,12 +288,84 @@ export const Preview = memo(
           'startViewTransition' in document &&
           typeof document.startViewTransition === 'function'
         ) {
-          document.startViewTransition(() => flushSync(() => update()))
+          const viewTransition = document.startViewTransition(() => flushSync(() => update()))
+          // @ts-expect-error - fix typings
+          viewTransition.types.add('sanity-iframe-viewport')
         } else {
           update()
         }
       }
     }, [canUseViewTransition, prefersReducedMotion, currentViewport, viewport])
+
+    const toast = useToast()
+    const [reportedMismatches] = useState(new Set<string>())
+    const reportMismatchingOrigin = useEffectEvent((reportedOrigin: string) => {
+      if (reportedMismatches.has(reportedOrigin)) return
+      reportedMismatches.add(reportedOrigin)
+      console.warn('Visual Editing is here but misconfigured', {reportedOrigin})
+      toast.push({
+        closable: true,
+        id: `presentation-iframe-origin-mismatch-${reportedOrigin}`,
+        status: 'error',
+        duration: Infinity,
+        title: t('preview-frame.configuration.error.title'),
+        description: (
+          <Translate
+            t={t}
+            i18nKey="preview-frame.configuration.error.description"
+            components={{Code: 'code'}}
+            values={{
+              targetOrigin: previewUrl.origin,
+              reportedOrigin,
+            }}
+          />
+        ),
+      })
+    })
+    useEffect(() => {
+      if (!timedOut || overlaysConnection !== 'connecting') return undefined
+
+      const interval = setInterval(() => {
+        ref.current?.contentWindow?.postMessage(
+          {domain: 'sanity/channels', from: 'presentation', type: 'presentation/status'},
+          /**
+           * The targetOrigin is set to '*' intentionally here, as we need to find out if the iframe is misconfigured and has the wrong origin
+           */
+          '*',
+        )
+      }, 1_000)
+
+      const controller = new AbortController()
+      window.addEventListener(
+        'message',
+        ({data}: MessageEvent<unknown>) => {
+          /**
+           * Listen for replies to presentation/status
+           */
+          if (
+            data &&
+            typeof data === 'object' &&
+            'domain' in data &&
+            data.domain === 'sanity/channels' &&
+            'type' in data &&
+            data.type === 'visual-editing/status' &&
+            'data' in data &&
+            typeof data.data === 'object' &&
+            data.data &&
+            'origin' in data.data &&
+            typeof data.data.origin === 'string'
+          ) {
+            reportMismatchingOrigin(data.data.origin)
+          }
+        },
+        {signal: controller.signal},
+      )
+
+      return () => {
+        controller.abort()
+        clearInterval(interval)
+      }
+    }, [overlaysConnection, timedOut])
 
     return (
       <MotionConfig transition={prefersReducedMotion ? {duration: 0} : undefined}>
@@ -278,6 +373,7 @@ export const Preview = memo(
           {previewHeader}
 
           {/* @TODO: Move this to <PreviewFrame /> */}
+          <GlobalViewTransition />
           <Card flex={1} tone="transparent">
             <Flex
               align="center"
