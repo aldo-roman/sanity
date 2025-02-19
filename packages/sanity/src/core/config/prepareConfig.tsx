@@ -8,7 +8,10 @@ import {type ComponentType, type ElementType, type ErrorInfo, isValidElement} fr
 import {isValidElementType} from 'react-is'
 import {map, shareReplay} from 'rxjs/operators'
 
-import {FileSource, ImageSource} from '../form/studio/assetSource'
+import {
+  FileSource as DefaultFileSource,
+  ImageSource as DefaultImageSource,
+} from '../form/studio/assetSourceDefault'
 import {type LocaleSource} from '../i18n'
 import {prepareI18n} from '../i18n/i18nConfig'
 import {createSchema} from '../schema'
@@ -568,7 +571,7 @@ function resolveSource({
         assetSources: resolveConfigProperty({
           config,
           context,
-          initialValue: [FileSource],
+          initialValue: [DefaultFileSource],
           propertyName: 'formBuilder.file.assetSources',
           reducer: fileAssetSourceResolver,
         }),
@@ -581,7 +584,7 @@ function resolveSource({
         assetSources: resolveConfigProperty({
           config,
           context,
-          initialValue: [ImageSource],
+          initialValue: [DefaultImageSource],
           propertyName: 'formBuilder.image.assetSources',
           reducer: imageAssetSourceResolver,
         }),
