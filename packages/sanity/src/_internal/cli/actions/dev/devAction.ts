@@ -16,6 +16,13 @@ import {getTimer} from '../../util/timing'
 export interface StartDevServerCommandFlags {
   host?: string
   port?: string
+  loadInDashboard?: boolean
+}
+
+export const getCoreURL = (): string => {
+  return process.env.SANITY_INTERNAL_ENV === 'staging'
+    ? 'https://core.sanity.work'
+    : 'https://core.sanity.io'
 }
 
 export default async function startSanityDevServer(
@@ -25,6 +32,8 @@ export default async function startSanityDevServer(
   const timers = getTimer()
   const flags = args.extOptions
   const {output, workDir, cliConfig} = context
+
+  const loadInDashboard = flags.loadInDashboard || false
 
   timers.start('checkStudioDependencyVersions')
   checkStudioDependencyVersions(workDir)
@@ -40,7 +49,15 @@ export default async function startSanityDevServer(
   const config = getDevServerConfig({flags, workDir, cliConfig, output})
 
   try {
-    await startDevServer(config)
+    const spinner = output.spinner('Starting dev server').start()
+    await startDevServer({...config, skipStartLog: loadInDashboard})
+    spinner.succeed()
+
+    if (loadInDashboard) {
+      output.print(`Dev server started on ${config.httpPort} port`)
+      output.print(`To load in dashboard, open this URL:`)
+      output.print(`${getCoreURL()}?dev=http://${config.httpHost}:${config.httpPort}`)
+    }
   } catch (err) {
     gracefulServerDeath('dev', config.httpHost, config.httpPort, err)
   }
