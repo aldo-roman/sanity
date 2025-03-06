@@ -278,6 +278,11 @@ export default defineConfig([
     auth: {
       loginMethod: 'token',
     },
+    beta: {
+      assetLibrary: {
+        enabled: true,
+      },
+    },
   },
   {
     name: 'custom-components',
