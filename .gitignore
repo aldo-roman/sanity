@@ -89,3 +89,4 @@ scripts/docs-report.md
 # Temporary data collected by Million Lint
 **/.million/store.json
 dev/test-studio/.react-compiler-bailout-report.json
+.vercel
