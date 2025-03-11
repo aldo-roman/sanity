@@ -221,7 +221,6 @@ export const ReleasePublishAllButton = ({
             content: publishTooltipContent,
             placement: 'bottom',
           }}
-          tone="primary"
           icon={PublishIcon}
           disabled={
             isPublishButtonDisabled ||
