@@ -24,7 +24,7 @@ export type ReleaseMenuButtonProps = {
   ignoreCTA?: boolean
   release: ReleaseDocument
   documentsCount: number
-  documents: DocumentInRelease[]
+  documents?: DocumentInRelease[]
 }
 
 export const ReleaseMenuButton = ({
@@ -198,7 +198,7 @@ export const ReleaseMenuButton = ({
               release={release}
               setSelectedAction={setSelectedAction}
               disabled={isPerformingOperation}
-              documents={documents}
+              documents={documents ?? []}
             />
           </Menu>
         }
