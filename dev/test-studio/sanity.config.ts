@@ -279,7 +279,7 @@ export default defineConfig([
       loginMethod: 'token',
     },
     beta: {
-      assetLibrary: {
+      mediaLibrary: {
         enabled: true,
       },
     },
