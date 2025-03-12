@@ -32,10 +32,7 @@ export default async function startAppDevServer(
 
   // Try to load CLI configuration from sanity.cli.(js|ts)
   const config = getDevServerConfig({
-    flags: {
-      ...flags,
-      port: flags.port || '3333',
-    },
+    flags,
     workDir,
     cliConfig,
     output,
