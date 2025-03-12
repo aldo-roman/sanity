@@ -109,7 +109,7 @@
     "@repo/package.config": "workspace:*",
     "@repo/test-config": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "@sanity/client": "^6.28.3",
+    "@sanity/client": "file:/Users/jordan.lawrence/Documents/repos/client",
     "@sanity/eslint-config-i18n": "1.0.0",
     "@sanity/eslint-config-studio": "^4.0.0",
     "@sanity/mutate": "^0.12.1",
@@ -193,7 +193,8 @@
       "@typescript-eslint/eslint-plugin": "$@typescript-eslint/eslint-plugin",
       "@typescript-eslint/parser": "$@typescript-eslint/parser",
       "eslint-plugin-react-hooks": "0.0.0-experimental-d55cc79b-20250228",
-      "vite": "$vite"
+      "vite": "$vite",
+      "@sanity/client": "file:/Users/jordan.lawrence/Documents/repos/client"
     }
   },
   "isSanityMonorepo": true
