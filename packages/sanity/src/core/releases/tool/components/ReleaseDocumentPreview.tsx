@@ -37,17 +37,27 @@ export function ReleaseDocumentPreview({
   const documentPresence = useDocumentPresence(documentId)
 
   const intentParams = useMemo(() => {
-    if (releaseState !== 'published' && releaseState !== 'archived') return {}
-
-    const rev = releaseState === 'archived' ? '@lastEdited' : '@lastPublished'
-
-    return {
-      rev,
-      inspect: 'sanity/structure/history',
-      historyEvent: documentRevision,
-      historyVersion: getReleaseIdFromReleaseDocumentId(releaseId),
+    if (releaseState === 'published') {
+      // We are inspecting this document through the published view of the doc.
+      return {
+        rev: `@release:${getReleaseIdFromReleaseDocumentId(releaseId)}`,
+        inspect: 'sanity/structure/history',
+      }
     }
-  }, [documentRevision, releaseId, releaseState])
+
+    if (releaseState === 'archived') {
+      // We are "faking" the release as if it is still valid only to render the document
+      return {
+        rev: '@lastEdited',
+        inspect: 'sanity/structure/history',
+        historyEvent: documentRevision,
+        historyVersion: getReleaseIdFromReleaseDocumentId(releaseId),
+        archivedRelease: 'true',
+      }
+    }
+
+    return {}
+  }, [releaseState, releaseId, documentRevision])
 
   const LinkComponent = useMemo(
     () =>
@@ -62,19 +72,12 @@ export function ReleaseDocumentPreview({
               type: documentTypeName,
               ...intentParams,
             }}
-            searchParams={[
-              [
-                'perspective',
-                releaseState === 'published'
-                  ? 'published'
-                  : getReleaseIdFromReleaseDocumentId(releaseId),
-              ],
-            ]}
+            searchParams={releaseState === 'published' ? [['perspective', 'published']] : undefined}
             ref={ref}
           />
         )
       }),
-    [documentId, documentTypeName, intentParams, releaseId, releaseState],
+    [documentId, documentTypeName, intentParams, releaseState],
   )
 
   const previewPresence = useMemo(
