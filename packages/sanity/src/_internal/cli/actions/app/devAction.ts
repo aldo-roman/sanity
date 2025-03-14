@@ -1,19 +1,29 @@
 import {type CliCommandArguments, type CliCommandContext} from '@sanity/cli'
+import chalk from 'chalk'
+import yargs from 'yargs'
+import {hideBin} from 'yargs/helpers'
 
 import {startDevServer} from '../../server/devServer'
 import {gracefulServerDeath} from '../../util/servers'
 import {getCoreAppURL, getDevServerConfig, type StartDevServerCommandFlags} from '../dev/devAction'
 
+function parseCliFlags(args: {argv?: string[]}) {
+  return yargs(hideBin(args.argv || process.argv).slice(2))
+    .options('port', {type: 'number', default: 3333})
+    .options('host', {type: 'string', default: '127.0.0.1'})
+    .options('load-in-dashboard', {type: 'boolean', default: true}).argv
+}
+
 export default async function startAppDevServer(
   args: CliCommandArguments<StartDevServerCommandFlags>,
   context: CliCommandContext,
 ): Promise<void> {
-  const flags = args.extOptions
-
+  const flags = await parseCliFlags(args)
   const {output, workDir, cliConfig} = context
-  if (flags.loadInDashboard === false) {
-    output.warn(`Core applications cannot be run without dashboard`)
-    output.warn(`Starting dev server with the --loadInDashboard flag set to true`)
+
+  if (!flags.loadInDashboard) {
+    output.warn(`Apps cannot run without the Sanity dashboard`)
+    output.warn(`Starting dev server with the --load-in-dashboard flag set to true`)
   }
 
   let organizationId: string | undefined
@@ -26,7 +36,7 @@ export default async function startAppDevServer(
   }
 
   if (!organizationId) {
-    output.error(`Core applications require an organization ID`)
+    output.error(`Apps require an organization ID (orgId) specified in your sanity.cli.ts file`)
     process.exit(1)
   }
 
@@ -44,9 +54,13 @@ export default async function startAppDevServer(
     spinner.succeed()
 
     output.print(`Dev server started on port ${config.httpPort}`)
-    output.print(`To load in dashboard, open this URL:`)
+    output.print(`View your app in the Sanity dashboard here:`)
     output.print(
-      getCoreAppURL({organizationId, httpHost: config.httpHost, httpPort: config.httpPort}),
+      chalk.blue(
+        chalk.underline(
+          getCoreAppURL({organizationId, httpHost: config.httpHost, httpPort: config.httpPort}),
+        ),
+      ),
     )
   } catch (err) {
     gracefulServerDeath('dev', config.httpHost, config.httpPort, err)

@@ -7,6 +7,9 @@ import {
   type CliOutputter,
 } from '@sanity/cli'
 import {type SanityProject} from '@sanity/client'
+import chalk from 'chalk'
+import {hideBin} from 'yargs/helpers'
+import yargs from 'yargs/yargs'
 
 import {type DevServerOptions, startDevServer} from '../../server/devServer'
 import {checkRequiredDependencies} from '../../util/checkRequiredDependencies'
@@ -15,9 +18,10 @@ import {getSharedServerConfig, gracefulServerDeath} from '../../util/servers'
 import {getTimer} from '../../util/timing'
 
 export interface StartDevServerCommandFlags {
-  host?: string
-  port?: string
-  loadInDashboard?: boolean
+  'host'?: string
+  'port'?: string
+  'load-in-dashboard'?: boolean
+  'force'?: boolean
 }
 
 export const getCoreURL = (): string => {
@@ -36,7 +40,14 @@ export const getCoreAppURL = ({
   httpPort?: number
 }): string => {
   // <core-app-url>/<orgniazationId>?dev=<dev-server-url>
-  return `${getCoreURL()}/${organizationId}?dev=http://${httpHost}:${httpPort}`
+  return `${getCoreURL()}/@${organizationId}?dev=http://${httpHost}:${httpPort}`
+}
+
+function parseCliFlags(args: {argv?: string[]}) {
+  return yargs(hideBin(args.argv || process.argv).slice(2))
+    .options('port', {type: 'number', default: 3333})
+    .options('host', {type: 'string', default: '127.0.0.1'})
+    .option('load-in-dashboard', {type: 'boolean', default: false}).argv
 }
 
 export default async function startSanityDevServer(
@@ -44,10 +55,10 @@ export default async function startSanityDevServer(
   context: CliCommandContext,
 ): Promise<void> {
   const timers = getTimer()
-  const flags = args.extOptions
+  const flags = await parseCliFlags(args)
   const {output, apiClient, workDir, cliConfig} = context
 
-  const loadInDashboard = flags.loadInDashboard || false
+  const {loadInDashboard} = flags
 
   timers.start('checkStudioDependencyVersions')
   checkStudioDependencyVersions(workDir)
@@ -67,7 +78,7 @@ export default async function startSanityDevServer(
 
   if (loadInDashboard) {
     if (!projectId) {
-      output.error('Project ID is required to load in dashboard')
+      output.error('Project Id is required to load in dashboard')
       process.exit(1)
     }
 
@@ -80,7 +91,7 @@ export default async function startSanityDevServer(
       const project = await client.request<SanityProject>({uri: `/projects/${projectId}`})
       organizationId = project.organizationId
     } catch (err) {
-      output.error('Failed to get organization ID from project ID')
+      output.error('Failed to get organization Id from project Id')
       process.exit(1)
     }
   }
@@ -92,18 +103,22 @@ export default async function startSanityDevServer(
 
     if (loadInDashboard) {
       if (!organizationId) {
-        output.error('Organization ID not found for project')
+        output.error('Organization Id not found for project')
         process.exit(1)
       }
 
       output.print(`Dev server started on ${config.httpPort} port`)
-      output.print(`To load in dashboard, open this URL:`)
+      output.print(`View your app in the Sanity dashboard here:`)
       output.print(
-        getCoreAppURL({
-          organizationId,
-          httpHost: config.httpHost,
-          httpPort: config.httpPort,
-        }),
+        chalk.blue(
+          chalk.underline(
+            getCoreAppURL({
+              organizationId,
+              httpHost: config.httpHost,
+              httpPort: config.httpPort,
+            }),
+          ),
+        ),
       )
     }
   } catch (err) {
@@ -117,13 +132,20 @@ export function getDevServerConfig({
   cliConfig,
   output,
 }: {
-  flags: StartDevServerCommandFlags
+  flags: Awaited<ReturnType<typeof parseCliFlags>>
   workDir: string
   cliConfig?: CliConfig
   output: CliOutputter
 }): DevServerOptions {
   const configSpinner = output.spinner('Checking configuration files...')
-  const baseConfig = getSharedServerConfig({flags, workDir, cliConfig})
+  const baseConfig = getSharedServerConfig({
+    flags: {
+      host: flags.host,
+      port: flags.port,
+    },
+    workDir,
+    cliConfig,
+  })
   configSpinner.succeed()
 
   const env = process.env // eslint-disable-line no-process-env
